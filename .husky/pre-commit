@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+(cd be && npm run hook:pre-commit)
+(cd fe && npm run hook:pre-commit)

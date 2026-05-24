@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: my_fin
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d my_fin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  be:
+    build:
+      context: ./be
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/my_fin?schema=public
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+
+  fe:
+    build:
+      context: ./fe
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
+    depends_on:
+      - be
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+
+volumes:
+  postgres-data:

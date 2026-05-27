@@ -64,20 +64,33 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
   - No, assume multiple users with isolated financial data.
 - Is audit/history needed?
   - No, latest state is enough.
+- What exact month-year string format should be used?
+  - Use `Month YYYY`, such as `May 2026`.
+- Should accounts be deletable if already used by monthly entries or recurring cost configurations?
+  - Yes, but deletion should be soft delete only.
+- Should recurring costs require a starting month-year?
+  - Yes, each recurring cost configuration requires a starting month-year.
+- Should payment date for costs be a full date, day-of-month number, or free text?
+  - Use a full date.
+- Should account-wise totals show inflow/outflow separately or a single net amount per account?
+  - Show inflows and outflows separately.
 
 ## Final Assumptions
 
-- The canonical month-year identifier is a string such as `YYYY-MM`; the exact display format can be user-friendly, but storage and API contracts should avoid datetime semantics.
+- The canonical month-year identifier is a string in `Month YYYY` format, such as `May 2026`; storage and API contracts should avoid datetime semantics for month-year values.
 - A user can select any month-year. If the record exists, the dashboard loads it. If it does not exist, the dashboard shows an empty state and allows creation.
 - `Add New` creates a month-year record for the entered month-year and fails with a toast error if the record already exists for the same user.
 - Deleting a month-year record deletes its related income, recurring cost instances, and other cost entries for that month-year.
+- Account deletion is soft delete only, so existing monthly history and recurring cost references remain understandable.
 - Income entries are dynamic and normally added per month by the user.
 - Other cost entries are dynamic and normally added per month by the user.
-- Recurring cost configurations are maintained outside the Monthly dashboard and are applied only when a matching month-year record is first created.
+- Recurring cost configurations are maintained outside the Monthly dashboard, require a starting month-year, and are applied only when a matching month-year record is first created.
 - Auto-applied recurring costs become monthly cost instances. Editing a monthly instance does not change the recurring cost configuration.
 - Updating a recurring cost configuration affects only month-year records created after the change, not already-created month-year records.
 - No duplicate entry detection is required for income, recurring cost instances, or other costs in the first version.
 - Amount and description are mandatory for income, recurring cost configuration, recurring cost monthly instances, and other cost entries.
+- Cost payment dates are full dates for both recurring cost instances and other cost entries.
+- Account-wise dashboard totals show inflows and outflows separately for each account.
 
 ## APIs To Create Or Update
 
@@ -85,11 +98,12 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
   - Key actions: create, list, update, and delete accounts.
   - Key data: account name such as SBI, HDFC, ICICI, cash, or other user-defined labels.
   - Validation: account name is required. Account data must be isolated by user.
+  - Behavior: deleting an account performs a soft delete so existing monthly and recurring cost records can continue to reference the account historically.
 
 - Create `Recurring cost configuration API`: Manage recurring cost templates per user.
   - Key actions: create, list, update, and delete recurring cost configurations.
-  - Key data: amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and the starting month-year from which the recurrence should apply.
-  - Validation: amount and description are required. Recurrence interval must be a positive number. Recurrence unit must be month or year. Account must refer to one of the user's predefined accounts.
+  - Key data: amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and the required starting month-year from which the recurrence should apply.
+  - Validation: amount and description are required. Recurrence interval must be a positive number. Recurrence unit must be month or year. Starting month-year is required and uses `Month YYYY` format. Account must refer to one of the user's predefined accounts.
   - Behavior: updates affect only future month-year creation.
 
 - Create `Monthly record API`: Create, fetch, update, and delete a month-year record for a user.
@@ -98,9 +112,9 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
     - Create selected month-year data through `Add New`.
     - Update editable month-level metadata if needed.
     - Delete a month-year record and related entries.
-  - Key data: user, month-year string, income entries, recurring cost instances, other cost entries, and calculated summaries.
+  - Key data: user, month-year string in `Month YYYY` format, income entries, recurring cost instances, other cost entries, and calculated summaries.
   - Validation: each user can have only one record for a month-year. If creation is attempted for an existing month-year, return an error that the frontend can show as a toast.
-  - Behavior: on first creation, auto-add recurring cost instances whose recurrence configuration matches the selected month-year.
+  - Behavior: on first creation, auto-add recurring cost instances whose recurrence configuration matches the selected month-year on or after the configuration's starting month-year.
 
 - Create `Monthly income entries API`: Manage income entries inside a month-year record.
   - Key actions: add, view, update, and delete income entries.
@@ -109,26 +123,27 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
 
 - Create `Monthly recurring cost instances API`: Manage recurring cost instances inside a month-year record.
   - Key actions: view, update, and delete auto-added recurring cost instances for a selected month-year.
-  - Key data: amount, outflow type, description, account, payment date, and reference to the originating recurring cost configuration when applicable.
+  - Key data: amount, outflow type, description, account, full payment date, and reference to the originating recurring cost configuration when applicable.
   - Validation: amount and description are required. Account must refer to one of the user's predefined accounts.
 
 - Create `Monthly other cost entries API`: Manage adhoc costs inside a month-year record.
   - Key actions: add, view, update, and delete other cost entries.
-  - Key data: amount, outflow type, description, account, and payment date.
+  - Key data: amount, outflow type, description, account, and full payment date.
   - Validation: amount and description are required. Account must refer to one of the user's predefined accounts.
 
 ## DB Tables To Create Or Update
 
 - `accounts`: Create or update user-specific predefined account records.
-  - High-level fields: user relationship, account name, and optional description or display metadata.
+  - High-level fields: user relationship, account name, optional description or display metadata, and soft-delete status.
   - Product requirement: account values used in income and cost forms should come from this user-managed list.
+  - Product requirement: soft-deleted accounts should remain available for historical records that already reference them.
 
 - `recurring_cost_configurations`: Create user-specific recurring cost templates.
-  - High-level fields: user relationship, amount, outflow type, description, account relationship, recurrence interval number, recurrence unit of month/year, and starting month-year.
+  - High-level fields: user relationship, amount, outflow type, description, account relationship, recurrence interval number, recurrence unit of month/year, and required starting month-year in `Month YYYY` format.
   - Product requirement: these configurations drive which recurring cost instances are auto-added when a month-year record is created.
 
 - `monthly_records`: Create user-specific month-year records.
-  - High-level fields: user relationship and month-year string.
+  - High-level fields: user relationship and month-year string in `Month YYYY` format.
   - Product requirement: enforce uniqueness for user plus month-year.
 
 - `monthly_income_entries`: Create income entries linked to a monthly record.
@@ -136,11 +151,11 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
   - Product requirement: support multiple income entries per month.
 
 - `monthly_recurring_cost_instances`: Create editable monthly copies of matched recurring costs.
-  - High-level fields: monthly record relationship, originating recurring cost configuration relationship where applicable, amount, outflow type, description, account relationship, and payment date.
+  - High-level fields: monthly record relationship, originating recurring cost configuration relationship where applicable, amount, outflow type, description, account relationship, and full payment date.
   - Product requirement: preserve the monthly value even if future recurring cost configuration changes.
 
 - `monthly_other_cost_entries`: Create adhoc month-specific cost entries.
-  - High-level fields: monthly record relationship, amount, outflow type, description, account relationship, and payment date.
+  - High-level fields: monthly record relationship, amount, outflow type, description, account relationship, and full payment date.
   - Product requirement: support dynamic monthly costs separate from recurring cost instances.
 
 ## Frontend Updates
@@ -148,6 +163,7 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
 - Add a standalone `Monthly` dashboard.
   - Defaults to the current month-year in the UI.
   - Provides controls to select month and year.
+  - Uses `Month YYYY` as the month-year display and submitted value.
   - Fetches and displays the selected month-year record if it exists.
   - Shows an empty state with an `Add New` action when the selected month-year does not exist.
 
@@ -161,7 +177,7 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
   - Show total recurring cost.
   - Show total other cost.
   - Show net savings.
-  - Show account-wise totals.
+  - Show account-wise totals with inflows and outflows separately.
 
 - Add monthly income table.
   - Display amount, source, description, and account.
@@ -185,12 +201,13 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
   - Search should help users find entries within the selected month across income, recurring costs, and other costs.
 
 - Add account setup page.
-  - User can create, view, update, and delete predefined accounts.
+  - User can create, view, update, and soft delete predefined accounts.
   - Monthly income and cost forms should use these accounts as selectable values.
+  - Historical records should continue to display soft-deleted accounts where they were already used.
 
 - Add recurring cost setup page.
   - User can create, view, update, and delete recurring cost configurations.
-  - Form fields include amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and starting month-year.
+  - Form fields include amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and required starting month-year in `Month YYYY` format.
   - Explain to the user that configuration changes affect future month creation only.
 
 ## Out Of Scope
@@ -206,8 +223,4 @@ All financial data is user-isolated. Amounts are INR-only, and transaction direc
 
 ## Open Questions
 
-- What exact month-year string format should be used in storage and APIs, such as `YYYY-MM`, `MM-YYYY`, or `Month YYYY`?
-- Should accounts be deletable if they are already used by monthly entries or recurring cost configurations?
-- Should recurring cost matching start from a required starting month-year, or should a recurring cost apply to all matching month-years once configured?
-- Should payment date for costs be a full date, a day-of-month number, or free text?
-- Should account-wise totals include both inflows and outflows separately, or show a single net amount per account?
+- None at this time.

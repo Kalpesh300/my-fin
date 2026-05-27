@@ -6,3 +6,117 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum RecurrenceUnit {
+  MONTH
+  YEAR
+}
+
+model Account {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  recurringCostConfigurations   RecurringCostConfiguration[]
+  monthlyIncomeEntries          MonthlyIncomeEntry[]
+  monthlyRecurringCostInstances MonthlyRecurringCostInstance[]
+  monthlyOtherCostEntries       MonthlyOtherCostEntry[]
+
+  @@index([userId])
+}
+
+model RecurringCostConfiguration {
+  id                 String         @id @default(cuid())
+  userId             String
+  accountId          String
+  amount             Decimal        @db.Decimal(12, 2)
+  outflowType        String
+  description        String
+  recurrenceInterval Int
+  recurrenceUnit     RecurrenceUnit
+  startingMonthYear  String
+  deletedAt          DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  account                       Account                        @relation(fields: [accountId], references: [id])
+  monthlyRecurringCostInstances MonthlyRecurringCostInstance[]
+
+  @@index([userId])
+  @@index([accountId])
+}
+
+model MonthlyRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  monthYear String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incomeEntries          MonthlyIncomeEntry[]
+  recurringCostInstances MonthlyRecurringCostInstance[]
+  otherCostEntries       MonthlyOtherCostEntry[]
+
+  @@unique([userId, monthYear])
+  @@index([userId])
+}
+
+model MonthlyIncomeEntry {
+  id              String   @id @default(cuid())
+  monthlyRecordId String
+  accountId       String
+  amount          Decimal  @db.Decimal(12, 2)
+  source          String
+  description     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  monthlyRecord MonthlyRecord @relation(fields: [monthlyRecordId], references: [id], onDelete: Cascade)
+  account       Account       @relation(fields: [accountId], references: [id])
+
+  @@index([monthlyRecordId])
+  @@index([accountId])
+}
+
+model MonthlyRecurringCostInstance {
+  id                           String   @id @default(cuid())
+  monthlyRecordId              String
+  recurringCostConfigurationId String?
+  accountId                    String
+  amount                       Decimal  @db.Decimal(12, 2)
+  outflowType                  String
+  description                  String
+  paymentDate                  DateTime
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  monthlyRecord              MonthlyRecord               @relation(fields: [monthlyRecordId], references: [id], onDelete: Cascade)
+  recurringCostConfiguration RecurringCostConfiguration? @relation(fields: [recurringCostConfigurationId], references: [id])
+  account                    Account                     @relation(fields: [accountId], references: [id])
+
+  @@index([monthlyRecordId])
+  @@index([recurringCostConfigurationId])
+  @@index([accountId])
+}
+
+model MonthlyOtherCostEntry {
+  id              String   @id @default(cuid())
+  monthlyRecordId String
+  accountId       String
+  amount          Decimal  @db.Decimal(12, 2)
+  outflowType     String
+  description     String
+  paymentDate     DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  monthlyRecord MonthlyRecord @relation(fields: [monthlyRecordId], references: [id], onDelete: Cascade)
+  account       Account       @relation(fields: [accountId], references: [id])
+
+  @@index([monthlyRecordId])
+  @@index([accountId])
+}

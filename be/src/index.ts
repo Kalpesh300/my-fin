@@ -3,15 +3,21 @@ import "dotenv/config";
 import express, { type Request, type Response } from "express";
 
 import { env } from "./config/env.js";
+import { apiRouter } from "./routes.js";
+import { corsMiddleware, errorHandler } from "./middleware.js";
 
 const app = express();
 const port = env.PORT;
 
+app.use(corsMiddleware);
 app.use(express.json());
 
 app.get("/health", (_request: Request, response: Response) => {
   response.json({ status: "ok" });
 });
+
+app.use("/api", apiRouter);
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Backend server is running on port ${port}.`);

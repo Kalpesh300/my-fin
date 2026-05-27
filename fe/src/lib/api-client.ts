@@ -11,6 +11,7 @@ const apiClient = axios.create({
   baseURL: apiEnv.VITE_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
+    "x-user-id": "demo-user",
   },
 });
 

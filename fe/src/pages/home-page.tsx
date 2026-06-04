@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Link, useLocation } from "react-router";
 import { useMemo, useState, type FormEvent } from "react";
+import { Link, useLocation } from "react-router";
 import { toast } from "sonner";
 
 import {
@@ -399,8 +399,7 @@ const AccountsPanel: React.FC<Readonly<{ accounts: Account[] }>> = ({ accounts }
   });
 
   const updateAccountMutation = useMutation({
-    mutationFn: () =>
-      updateAccount(form.id, { name: form.name, description: form.description }),
+    mutationFn: () => updateAccount(form.id, { name: form.name, description: form.description }),
     onError: showErrorToast,
     onSuccess: () => handleSuccess("Account updated."),
   });
@@ -608,8 +607,7 @@ const RecurringCostsPanel: React.FC<
       <CardHeader>
         <CardTitle>Recurring cost setup</CardTitle>
         <CardDescription>
-          Changes affect only future month creation. Auto-created payments use the 1st of
-          the month.
+          Changes affect only future month creation. Auto-created payments use the 1st of the month.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
@@ -956,7 +954,9 @@ const MonthlyEntryTables: React.FC<
       <Card>
         <CardHeader>
           <CardTitle>Income</CardTitle>
-          <CardDescription>Add free-text sources with account-level inflow tracking.</CardDescription>
+          <CardDescription>
+            Add free-text sources with account-level inflow tracking.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <form onSubmit={handleIncomeSubmit}>
@@ -1263,13 +1263,13 @@ const HomePage: React.FC = () => {
   return (
     <Page>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-2">
           <CardTitle className="text-3xl">Monthly</CardTitle>
           <CardDescription>
-            Defaults to {getCurrentMonthYear()}. Select any month-year, create it on
-            demand, and manage INR inflows and outflows.
+            Defaults to {getCurrentMonthYear()}. Select any month-year, create it on demand, and
+            manage INR inflows and outflows.
           </CardDescription>
-          <CardAction className="static col-auto row-auto">
+          <CardAction className="static col-auto row-auto w-full justify-self-stretch xl:w-auto xl:justify-self-end">
             <FieldGroup className="grid gap-3 sm:grid-cols-[160px_120px_auto]">
               <Field>
                 <FieldLabel>Month</FieldLabel>
@@ -1293,9 +1293,10 @@ const HomePage: React.FC = () => {
               />
               <Field className="justify-end">
                 <FieldLabel className="sr-only">Monthly actions</FieldLabel>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
+                    className="flex-1 sm:flex-none"
                     onClick={() => createMonthlyMutation.mutate()}
                     disabled={Boolean(monthlyRecord) || createMonthlyMutation.isPending}
                   >
@@ -1305,6 +1306,7 @@ const HomePage: React.FC = () => {
                     <Button
                       type="button"
                       variant="destructive"
+                      className="flex-1 sm:flex-none"
                       onClick={() => deleteMonthlyMutation.mutate(monthlyRecord.id)}
                     >
                       Delete month

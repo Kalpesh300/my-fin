@@ -13,9 +13,9 @@ When working in either area, follow the more specific `AGENTS.md` file inside th
 
 | Service | Port | Run command | Notes |
 |---------|------|-------------|-------|
-| PostgreSQL | 5432 | `sudo docker compose up -d postgres` (from repo root) | Must be running before backend starts |
-| Backend | 3000 | `cd be && npm run dev` | Uses tsx watch; requires `be/.env` (copy from `.env.example`) |
-| Frontend | 5173 | `cd fe && npm run dev` | Vite HMR; no env config needed for local dev |
+| PostgreSQL | 5433 | `sudo docker compose up -d postgres` (from repo root) | Must be running before backend starts |
+| Backend | 3001 | `cd be && npm run dev` | Uses tsx watch; requires `be/.env` (copy from `.env.example`) |
+| Frontend | 8001 | `cd fe && npm run dev` | Vite HMR; no env config needed for local dev |
 
 ### Node.js version
 
@@ -29,7 +29,7 @@ This is already configured in `~/.bashrc` for new shells.
 
 ### Docker (PostgreSQL)
 
-Docker is needed only to run PostgreSQL via `docker-compose.yml`. Start the daemon with `sudo dockerd` if it isn't already running, then `sudo docker compose up -d postgres` from the repo root. The backend `DATABASE_URL` defaults to `postgresql://postgres:postgres@localhost:5432/my_fin?schema=public`.
+Docker is needed only to run PostgreSQL via `docker-compose.yml`. Start the daemon with `sudo dockerd` if it isn't already running, then `sudo docker compose up -d postgres` from the repo root. The backend `DATABASE_URL` defaults to `postgresql://postgres:postgres@localhost:5433/my_fin?schema=public`.
 
 ### Prisma
 

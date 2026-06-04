@@ -1,226 +1,146 @@
 # Requirement Summary
 
-Create a standalone dashboard named `Monthly` where each user can view and manage finance details for a selected month-year. The dashboard should default to the current month-year, allow selection of any month-year, and support creating month-year records on demand through an `Add New` flow.
-
-Each month-year record is unique per user and contains:
-
-- Income sources with amount, free-text source, description, and account.
-- Recurring costs that are configured separately and auto-applied when a matching month-year is created.
-- Other month-specific adhoc costs.
-
-All financial data is user-isolated. Amounts are INR-only, and transaction direction is determined by section: income is inflow, recurring costs and other costs are outflows.
+Implement a Net Worth dashboard where a user can manage assets, liabilities, and their categories. The dashboard should let the user add, list, view details, update, and archive assets and liabilities, link each item to a category, calculate net worth from total assets minus total liabilities, and show monthly historical net worth trends over time.
 
 ## Clarifications Asked
 
-- Should `Monthly` be standalone or part of another dashboard?
-  - Standalone.
-- How should month/year be represented?
-  - Store a month-year value as a non-datetime string to avoid timezone concerns.
-- Can users create records for any month-year?
-  - Yes, there are no past or future restrictions.
-- What should happen when a selected month-year has no data?
-  - Show an empty state with an option to create it.
-- Is there one month-year record per user?
-  - Yes, exactly one per user per month-year.
-- Can data be edited after creation?
-  - Yes, the month-year record and all entries remain editable.
-- Can a month-year record be deleted?
-  - Yes.
-- Can a month have multiple income sources?
-  - Yes.
-- Are income source categories required?
-  - No, use free-text source.
-- Are income dates required?
-  - No dates for income entries for now.
-- How should accounts be captured?
-  - Use a predefined account list managed from an account setup page.
-- Are recurring costs configured separately?
-  - Yes, users need a setup page for recurring costs.
-- Should recurring costs become editable monthly entries?
-  - Yes, auto-added recurring costs can be edited on the Monthly dashboard.
-- How should variable recurring costs work?
-  - Users can enter an approximate amount when configuring the recurring cost and edit the amount on the monthly board.
-- How should recurrence be configured?
-  - Use a number input and a unit option of month or year, supporting every 1/2/3/etc. months or years.
-- Do recurring costs need active/inactive status?
-  - No.
-- If a recurring cost configuration changes, what should it affect?
-  - Future months only.
-- What is outflow type?
-  - A free-text/static string entered by the user.
-- Are payment dates needed for costs?
-  - Yes, for both recurring costs and other costs.
-- Should recurring and adhoc costs be grouped differently in reporting?
-  - Yes.
-- What dashboard summaries are needed?
-  - Total income, total recurring cost, total other cost, net savings, and account-wise totals.
-- Are charts needed?
-  - No, tables only.
-- Should export be included?
-  - No.
-- Should search/filter be included?
-  - Search filter only.
-- Is the app single-user?
-  - No, assume multiple users with isolated financial data.
-- Is audit/history needed?
-  - No, latest state is enough.
-- What exact month-year string format should be used?
-  - Use `Month YYYY`, such as `May 2026`.
-- Should accounts be deletable if already used by monthly entries or recurring cost configurations?
-  - Yes, but deletion should be soft delete only.
-- Should recurring costs require a starting month-year?
-  - Yes, each recurring cost configuration requires a starting month-year.
-- Should payment date for costs be a full date, day-of-month number, or free text?
-  - Use a full date.
-- Should account-wise totals show inflow/outflow separately or a single net amount per account?
-  - Show inflows and outflows separately.
+- The previous root `requirements.md` was removed so new requirements can start clean.
+- The user asked to check older requirements in the root `docs` directory before drafting; no root `docs` directory was found.
+- The user provided screenshots for asset category forms; these are treated as the current source for category-specific fields.
+- Net worth history should be shown over time with month as the data point.
+- Asset categories and liability categories should be separate.
+- Categories should use predefined templates, not user-defined custom field builders.
+- Asset current value should support both manual entry and calculated value options.
+- V1 liability categories should include the mentioned loan and debt categories: home loan, personal loan, credit card, car loan, and other debt.
+- Liabilities should track EMI, outstanding balance, due date, minimum due, and payment history.
+- Delete behavior should be archive-only; no hard deletes.
+- V1 asset categories should include Cash in Hand, Bonds, Real Estate, Commodities, PPF, EPF, and Fixed Deposit.
+- Equity, Stocks, and Mutual Funds should be handled later.
+- Compounding frequency should support monthly, quarterly, half-yearly, yearly, and on maturity.
 
 ## Final Assumptions
 
-- The canonical month-year identifier is a string in `Month YYYY` format, such as `May 2026`; storage and API contracts should avoid datetime semantics for month-year values.
-- A user can select any month-year. If the record exists, the dashboard loads it. If it does not exist, the dashboard shows an empty state and allows creation.
-- `Add New` creates a month-year record for the entered month-year and fails with a toast error if the record already exists for the same user.
-- Deleting a month-year record deletes its related income, recurring cost instances, and other cost entries for that month-year.
-- Account deletion is soft delete only, so existing monthly history and recurring cost references remain understandable.
-- Income entries are dynamic and normally added per month by the user.
-- Other cost entries are dynamic and normally added per month by the user.
-- Recurring cost configurations are maintained outside the Monthly dashboard, require a starting month-year, and are applied only when a matching month-year record is first created.
-- Auto-applied recurring costs become monthly cost instances. Editing a monthly instance does not change the recurring cost configuration.
-- Updating a recurring cost configuration affects only month-year records created after the change, not already-created month-year records.
-- No duplicate entry detection is required for income, recurring cost instances, or other costs in the first version.
-- Amount and description are mandatory for income, recurring cost configuration, recurring cost monthly instances, and other cost entries.
-- Cost payment dates are full dates for both recurring cost instances and other cost entries.
-- Account-wise dashboard totals show inflows and outflows separately for each account.
+- A user owns their own assets, liabilities, and categories.
+- Asset categories represent positive-value holdings or investments, with V1 predefined templates for Cash in Hand, Bonds, Real Estate, Commodities, PPF, EPF, and Fixed Deposit.
+- Liability categories represent obligations or debt, with V1 predefined templates for Home Loan, Personal Loan, Credit Card, Car Loan, and Other Debt.
+- Asset categories and liability categories should be managed separately; asset-linked categories should have positive expected return behavior and liability-linked categories should have negative return or cost behavior.
+- Every asset or liability entry should support the common financial fields: investment or principal amount, annual interest rate, start date, maturity date, and compounding frequency.
+- Compounding frequency options should be monthly, quarterly, half-yearly, yearly, and on maturity.
+- Category-specific fields should be shown in addition to common fields when the selected category requires them.
+- Asset value should allow both manual current value entry and calculated current value from amount, rate, dates, and compounding frequency.
+- Liability records should support original principal, outstanding balance, EMI, minimum due, due date, and payment history.
+- Delete operations should archive records instead of permanently deleting them.
+- INR should be the default amount currency.
 
 ## APIs To Create Or Update
 
-- Create `Account management API`: Manage the predefined account list per user.
-  - Key actions: create, list, update, and delete accounts.
-  - Key data: account name such as SBI, HDFC, ICICI, cash, or other user-defined labels.
-  - Validation: account name is required. Account data must be isolated by user.
-  - Behavior: deleting an account performs a soft delete so existing monthly and recurring cost records can continue to reference the account historically.
-
-- Create `Recurring cost configuration API`: Manage recurring cost templates per user.
-  - Key actions: create, list, update, and delete recurring cost configurations.
-  - Key data: amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and the required starting month-year from which the recurrence should apply.
-  - Validation: amount and description are required. Recurrence interval must be a positive number. Recurrence unit must be month or year. Starting month-year is required and uses `Month YYYY` format. Account must refer to one of the user's predefined accounts.
-  - Behavior: updates affect only future month-year creation.
-
-- Create `Monthly record API`: Create, fetch, update, and delete a month-year record for a user.
-  - Key actions:
-    - Fetch selected month-year data.
-    - Create selected month-year data through `Add New`.
-    - Update editable month-level metadata if needed.
-    - Delete a month-year record and related entries.
-  - Key data: user, month-year string in `Month YYYY` format, income entries, recurring cost instances, other cost entries, and calculated summaries.
-  - Validation: each user can have only one record for a month-year. If creation is attempted for an existing month-year, return an error that the frontend can show as a toast.
-  - Behavior: on first creation, auto-add recurring cost instances whose recurrence configuration matches the selected month-year on or after the configuration's starting month-year.
-
-- Create `Monthly income entries API`: Manage income entries inside a month-year record.
-  - Key actions: add, view, update, and delete income entries.
-  - Key data: amount, source, description, and account.
-  - Validation: amount and description are required. Account must refer to one of the user's predefined accounts.
-
-- Create `Monthly recurring cost instances API`: Manage recurring cost instances inside a month-year record.
-  - Key actions: view, update, and delete auto-added recurring cost instances for a selected month-year.
-  - Key data: amount, outflow type, description, account, full payment date, and reference to the originating recurring cost configuration when applicable.
-  - Validation: amount and description are required. Account must refer to one of the user's predefined accounts.
-
-- Create `Monthly other cost entries API`: Manage adhoc costs inside a month-year record.
-  - Key actions: add, view, update, and delete other cost entries.
-  - Key data: amount, outflow type, description, account, and full payment date.
-  - Validation: amount and description are required. Account must refer to one of the user's predefined accounts.
+- Create `GET /net-worth/summary`: Return total assets, total liabilities, current net worth, and category-level breakdowns.
+- Create `GET /net-worth/history`: Return monthly historical net worth data points, including total assets, total liabilities, and net worth for each month.
+- Create `GET /asset-categories`: List asset categories with return direction, display name, and required field configuration.
+- Create `POST /asset-categories`: Create or enable a predefined asset category; validate that its return behavior is positive.
+- Create `GET /asset-categories/{id}`: Return asset category details and field requirements.
+- Create `PATCH /asset-categories/{id}`: Update allowed asset category metadata for a predefined template.
+- Create `DELETE /asset-categories/{id}`: Archive an asset category; do not hard delete it.
+- Create `GET /liability-categories`: List liability categories with return direction, display name, and required field configuration.
+- Create `POST /liability-categories`: Create or enable a predefined liability category; validate that its return behavior is negative.
+- Create `GET /liability-categories/{id}`: Return liability category details and field requirements.
+- Create `PATCH /liability-categories/{id}`: Update allowed liability category metadata for a predefined template.
+- Create `DELETE /liability-categories/{id}`: Archive a liability category; do not hard delete it.
+- Create `GET /assets`: List assets with category, current value, invested amount, maturity date, and summary metadata.
+- Create `POST /assets`: Create an asset linked to an asset category; validate required common and category-specific fields.
+- Create `GET /assets/{id}`: Return asset details, category details, manual current value, calculated current value where available, dates, rates, notes, and value mode.
+- Create `PATCH /assets/{id}`: Update asset details and recalculate affected summary values.
+- Create `DELETE /assets/{id}`: Archive an asset and remove it from active net worth calculations.
+- Create `GET /liabilities`: List liabilities with category, outstanding amount, principal amount, EMI, minimum due, maturity or due date, and summary metadata.
+- Create `POST /liabilities`: Create a liability linked to a liability category; validate required common and category-specific fields.
+- Create `GET /liabilities/{id}`: Return liability details, category details, principal, outstanding balance, EMI, minimum due, due dates, rates, notes, payment history, and calculated fields where available.
+- Create `PATCH /liabilities/{id}`: Update liability details and recalculate affected summary values.
+- Create `DELETE /liabilities/{id}`: Archive a liability and remove it from active net worth calculations.
+- Create `GET /liabilities/{id}/payments`: List payment history for a liability.
+- Create `POST /liabilities/{id}/payments`: Add a payment entry and update outstanding balance when applicable.
 
 ## DB Tables To Create Or Update
 
-- `accounts`: Create or update user-specific predefined account records.
-  - High-level fields: user relationship, account name, optional description or display metadata, and soft-delete status.
-  - Product requirement: account values used in income and cost forms should come from this user-managed list.
-  - Product requirement: soft-deleted accounts should remain available for historical records that already reference them.
-
-- `recurring_cost_configurations`: Create user-specific recurring cost templates.
-  - High-level fields: user relationship, amount, outflow type, description, account relationship, recurrence interval number, recurrence unit of month/year, and required starting month-year in `Month YYYY` format.
-  - Product requirement: these configurations drive which recurring cost instances are auto-added when a month-year record is created.
-
-- `monthly_records`: Create user-specific month-year records.
-  - High-level fields: user relationship and month-year string in `Month YYYY` format.
-  - Product requirement: enforce uniqueness for user plus month-year.
-
-- `monthly_income_entries`: Create income entries linked to a monthly record.
-  - High-level fields: monthly record relationship, amount, source, description, and account relationship.
-  - Product requirement: support multiple income entries per month.
-
-- `monthly_recurring_cost_instances`: Create editable monthly copies of matched recurring costs.
-  - High-level fields: monthly record relationship, originating recurring cost configuration relationship where applicable, amount, outflow type, description, account relationship, and full payment date.
-  - Product requirement: preserve the monthly value even if future recurring cost configuration changes.
-
-- `monthly_other_cost_entries`: Create adhoc month-specific cost entries.
-  - High-level fields: monthly record relationship, amount, outflow type, description, account relationship, and full payment date.
-  - Product requirement: support dynamic monthly costs separate from recurring cost instances.
+- `asset_categories`: Create; stores predefined user-enabled asset category templates, positive return behavior, default field requirements, archive status, and ordering.
+- `liability_categories`: Create; stores predefined user-enabled liability category templates, negative return behavior or cost behavior, default field requirements, archive status, and ordering.
+- `assets`: Create; stores user-owned asset records linked to asset categories, common financial fields, manual current value, calculated current value, selected value mode, notes, category-specific data, and archive status.
+- `liabilities`: Create; stores user-owned liability records linked to liability categories, common financial fields, original principal, outstanding balance, EMI, minimum due, due dates, notes, category-specific data, and archive status.
+- `liability_payments`: Create; stores user-entered payment history for liabilities, including payment date, amount, notes, and relationship to the liability.
+- `net_worth_snapshots`: Create; stores monthly historical snapshots of total assets, total liabilities, and net worth.
 
 ## Frontend Updates
 
-- Add a standalone `Monthly` dashboard.
-  - Defaults to the current month-year in the UI.
-  - Provides controls to select month and year.
-  - Uses `Month YYYY` as the month-year display and submitted value.
-  - Fetches and displays the selected month-year record if it exists.
-  - Shows an empty state with an `Add New` action when the selected month-year does not exist.
+- Net Worth Dashboard:
+  - Show total assets, total liabilities, and net worth.
+  - Show a monthly historical trend chart with one data point per month.
+  - Show asset and liability category breakdowns.
+  - Provide entry points to add assets, add liabilities, manage categories, and open list/detail screens.
+  - Include loading, empty, error, and success states.
 
-- Add `Add New` flow for month-year records.
-  - User enters/selects month and year.
-  - If the month-year already exists, show a toast error.
-  - If creation succeeds, load the created monthly board with matching recurring costs auto-added.
+- Asset List:
+  - Show assets with category, name, invested amount, current value, maturity date, and latest known return or interest metadata.
+  - Support view details, edit, and archive actions.
+  - Include empty, loading, archive confirmation, success, and error states.
 
-- Add dashboard summary section.
-  - Show total income.
-  - Show total recurring cost.
-  - Show total other cost.
-  - Show net savings.
-  - Show account-wise totals with inflows and outflows separately.
+- Asset Details:
+  - Show common fields, category-specific fields, notes, manual current value, calculated current value where applicable, and selected value mode.
+  - Support edit and archive actions.
 
-- Add monthly income table.
-  - Display amount, source, description, and account.
-  - Support add, view, update, and delete.
-  - Include validation errors for required amount and description.
-  - Include loading, empty, save success, and backend error states.
+- Add/Edit Asset:
+  - Require an asset category.
+  - Show common fields: investment amount, annual interest rate, start date, maturity date, and compounding frequency.
+  - Let the user choose manual current value or calculated current value.
+  - Show category-specific fields based on the selected category.
+  - Validate INR amounts, dates, required fields, positive return behavior, and category linkage.
 
-- Add monthly recurring cost table.
-  - Display amount, outflow type, description, account, payment date, and recurrence origin where useful.
-  - Support view, update, and delete for monthly instances.
-  - Include validation errors for required amount and description.
-  - Include loading, empty, save success, and backend error states.
+- Liability List:
+  - Show liabilities with category, name, principal amount, outstanding amount, EMI, minimum due, rate, due or maturity date, and latest known cost metadata.
+  - Support view details, edit, and archive actions.
+  - Include empty, loading, archive confirmation, success, and error states.
 
-- Add monthly other cost table.
-  - Display amount, outflow type, description, account, and payment date.
-  - Support add, view, update, and delete.
-  - Include validation errors for required amount and description.
-  - Include loading, empty, save success, and backend error states.
+- Liability Details:
+  - Show common fields, category-specific fields, notes, original principal, outstanding balance, EMI, minimum due, due date, payment history, and calculated outstanding value where applicable.
+  - Support edit and archive actions.
 
-- Add search filter on the Monthly dashboard.
-  - Search should help users find entries within the selected month across income, recurring costs, and other costs.
+- Add/Edit Liability:
+  - Require a liability category.
+  - Show common fields: principal or investment amount, annual interest rate, start date, maturity date, and compounding frequency.
+  - Show liability fields for outstanding balance, EMI, minimum due, and due date when applicable.
+  - Validate INR amounts, dates, required fields, negative return or cost behavior, and category linkage.
 
-- Add account setup page.
-  - User can create, view, update, and soft delete predefined accounts.
-  - Monthly income and cost forms should use these accounts as selectable values.
-  - Historical records should continue to display soft-deleted accounts where they were already used.
+- Category Management:
+  - Provide separate management screens or tabs for asset categories and liability categories.
+  - Support add or enable, list, details, update allowed metadata, and archive operations.
+  - Use predefined category templates rather than custom user-defined field builders.
 
-- Add recurring cost setup page.
-  - User can create, view, update, and delete recurring cost configurations.
-  - Form fields include amount, outflow type, description, account, recurrence interval number, recurrence unit of month/year, and required starting month-year in `Month YYYY` format.
-  - Explain to the user that configuration changes affect future month creation only.
+- Screenshot-derived asset category fields:
+  - Cash in Hand: name, amount, notes.
+  - Bonds: bond name, invested amount, current amount, maturity date, interest rate, credit rating, type, notes.
+  - Real Estate: property type, property name, self-occupied flag, current value, purchase price, purchase date, city.
+  - Commodities: investment type, name, commodity type, quantity in grams, buy price per gram, notes.
+  - PPF: current balance, investment frequency, next investment date, investment amount, first investment date, notes.
+  - EPF: current balance, monthly contribution, UAN number, notes.
+  - Fixed Deposit: bank, investment amount, annual interest rate, start date, maturity date, compounding frequency.
+
+- V1 liability category fields:
+  - Home Loan: lender, principal amount, outstanding balance, annual interest rate, EMI, start date, maturity date, due date, payment history, notes.
+  - Personal Loan: lender, principal amount, outstanding balance, annual interest rate, EMI, start date, maturity date, due date, payment history, notes.
+  - Credit Card: card issuer, outstanding balance, minimum due, due date, annual interest rate, payment history, notes.
+  - Car Loan: lender, vehicle name, principal amount, outstanding balance, annual interest rate, EMI, start date, maturity date, due date, payment history, notes.
+  - Other Debt: lender or source, principal amount, outstanding balance, annual interest rate, EMI or minimum due, start date, maturity date, due date, payment history, notes.
 
 ## Out Of Scope
 
-- Charts or visual graph summaries.
-- CSV, PDF, or other export flows.
-- Yearly summaries or future cash-flow reporting.
-- Audit log or historical versioning of edits.
-- Duplicate detection for similar income or cost entries.
-- Income payment/received dates.
-- Active/inactive state for recurring costs.
-- Compliance-specific workflows such as PAN, Aadhaar, KYC, GST, RBI, or SEBI handling.
+- Source code implementation for frontend, backend, database schema, or tests.
+- Automatic imports from banks, brokers, EPFO, NSDL, CDSL, or statement files.
+- Real-time market price integrations for equity, gold, commodities, or bonds.
+- Equity, Stocks, and Mutual Funds categories for V1.
+- Tax calculations, compliance workflows, KYC, PAN, Aadhaar, or regulatory reporting.
+- Multi-user household sharing, advisor access, or role-based permissions unless requested later.
 
 ## Open Questions
 
-- None at this time.
+- Should investment amount be mandatory for every category, including Cash in Hand and Real Estate, where the screenshots use amount or current value wording?
+- Should attachments, documents, account numbers, nominee details, or institution names be captured for any category?
+- Should monthly net worth snapshots be generated automatically at month-end, updated whenever records change, or both?
+- Should archived records remain visible in a separate archive view?
